@@ -1,64 +1,188 @@
-<!-- add_class.html -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Add Class</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+    form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    input, select, button {
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    label {
+      font-weight: bold;
+      margin-bottom: 5px;
+      display: block;
+    }
+    button {
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background-color: #45a049;
+    }
+    .status {
+      margin-top: 20px;
+      padding: 10px;
+      border-radius: 4px;
+      display: none;
+    }
+    .success {
+      background-color: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    .error {
+      background-color: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+  </style>
 </head>
 <body>
   <h2>Add New Class</h2>
-  <form onsubmit="addClass(event)">
-    <input type="text" id="className" placeholder="Class Name" required />
-    <!-- <label for="sessionName">Select Session:</label> -->
-    <select id="sessionName" required>
-      <option value="" disabled selected>Select a session</option>
-      <option value="session6">2020-2021</option>
-      <option value="session1">2021-2022</option>
-      <option value="session2">2022-2023</option>
-      <option value="session3">2023-2024</option>
-      <option value="session4">2024-2025</option>
-      <option value="session5">2025-2026</option>
-    </select>
-
-    <button type="submit">Add</button>
+  
+  <form id="classForm">
+    <div>
+      <label for="className">Class Name:</label>
+      <input type="text" id="className" placeholder="Enter class name" required />
+    </div>
+    
+    <div>
+      <label for="sessionName">Select Session:</label>
+      <select id="sessionName" required>
+        <option value="" disabled selected>Select a session</option>
+        <!-- Sessions will be loaded dynamically -->
+      </select>
+    </div>
+    
+    <button type="submit">Add Class</button>
   </form>
+  
+  <div id="status" class="status"></div>
+  
   <script>
-    async function addClass(e) {
-      e.preventDefault();
-      const className = document.getElementById('className').value;
-      const sessionName = document.getElementById('sessionName').value;
-  
-      // First fetch full session data
-      const sessionRes = await fetch(`http://localhost:3000/api/sessions/${sessionName}`);
-      const sessionData = await sessionRes.json();
-  
-      if (!sessionRes.ok) {
-        alert('Failed to fetch session');
-        return;
-      }
-  
-      // Post the class with copied session data
-      const response = await fetch('http://localhost:3000/api/classes', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          name: className,
-          // session: sessionName,
-          data: sessionData.data, // copying student/session structure
-        }),
-      });
-  
-      if (response.ok) {
-        location.href = 'index.html';
-      } else {
-        alert('Failed to add class');
+    document.addEventListener('DOMContentLoaded', async () => {
+      // Load sessions when page loads
+      loadSessions();
+      
+      // Setup form submission
+      document.getElementById('classForm').addEventListener('submit', addClass);
+    });
+    
+    async function loadSessions() {
+      try {
+        const response = await fetch('http://localhost:3000/api/sessions');
+        
+        if (!response.ok) {
+          throw new Error('Failed to load sessions');
+        }
+        
+        const sessions = await response.json();
+        const selectElement = document.getElementById('sessionName');
+        
+        // Clear existing options
+        selectElement.innerHTML = '<option value="" disabled selected>Select a session</option>';
+        
+        // Add session options
+        sessions.forEach(session => {
+          const option = document.createElement('option');
+          option.value = session.name;
+          option.textContent = session.name;
+          selectElement.appendChild(option);
+        });
+        
+        // If no sessions found
+        if (sessions.length === 0) {
+          showStatus('No sessions found. Please create sessions first.', 'error');
+        }
+        
+      } catch (error) {
+        console.error('Error loading sessions:', error);
+        showStatus('Error loading sessions: ' + error.message, 'error');
       }
     }
-  </script>
-  
     
+    async function addClass(event) {
+      event.preventDefault();
+      
+      const className = document.getElementById('className').value.trim();
+      const sessionName = document.getElementById('sessionName').value;
+      
+      if (!className || !sessionName) {
+        showStatus('Please enter class name and select a session', 'error');
+        return;
+      }
+      
+      try {
+        showStatus('Creating class...', 'info');
+        
+        // Create the new class
+        const response = await fetch('http://localhost:3000/api/classes', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            name: className,
+            session: sessionName
+          }),
+        });
+        
+        const result = await response.json();
+        
+        if (!response.ok) {
+          throw new Error(result.error || 'Failed to create class');
+        }
+        
+        showStatus('Class created successfully!', 'success');
+        
+        // Reset form
+        document.getElementById('classForm').reset();
+        
+        // Redirect after a short delay
+        setTimeout(() => {
+          window.location.href = 'index.html';
+        }, 1500);
+        
+      } catch (error) {
+        console.error('Error creating class:', error);
+        showStatus('Error: ' + error.message, 'error');
+      }
+    }
+    
+    function showStatus(message, type) {
+      const statusElement = document.getElementById('status');
+      statusElement.textContent = message;
+      statusElement.className = 'status';
+      
+      if (type === 'success') {
+        statusElement.classList.add('success');
+      } else if (type === 'error') {
+        statusElement.classList.add('error');
+      } else {
+        statusElement.style.backgroundColor = '#e2e3e5';
+        statusElement.style.color = '#383d41';
+        statusElement.style.border = '1px solid #d6d8db';
+      }
+      
+      statusElement.style.display = 'block';
+    }
+  </script>
 </body>
 </html>

@@ -1,18 +1,81 @@
 // Initialize values
-document.getElementById("session").innerHTML = "2021-22";
-document.getElementById("class").innerHTML = "Operating System";
-document.getElementById("atdcnt").value = 1;
+document.addEventListener("DOMContentLoaded", () => {
+    // Get class ID from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const classId = urlParams.get('id');
+    
+    if (!classId) {
+        showError("No class ID provided. Redirecting to class list...");
+        setTimeout(() => {
+            window.location.href = "index.html";
+        }, 2000);
+        return;
+    }
+    
+    // Fetch class data and student attendance
+    fetchClassData(classId);
+});
 
-const API_URL = 'http://localhost:3000/api';
-
-async function fetchStudentData() {
+async function fetchClassData(classId) {
     try {
-        const response = await fetch("data/students.json");
-        if (!response.ok) {
-            throw new Error("Failed to load student data");
+        // First fetch class details
+        const classResponse = await fetch(`${API_URL}/classes/${classId}`);
+        if (!classResponse.ok) {
+            throw new Error("Failed to load class data");
         }
-        const students = await response.json();
-        populateTable(students);
+        const classData = await classResponse.json();
+        
+        // Update header information
+        document.getElementById("session").innerHTML = classData.session;
+        document.getElementById("class").innerHTML = classData.name;
+        document.getElementById("atdcnt").value = 1;
+        
+        // Then fetch attendance data for this class
+        fetchAttendanceData(classId, classData);
+    } catch (error) {
+        console.error("Error:", error);
+        showError("Failed to load class data");
+    }
+}
+
+async function fetchAttendanceData(classId, classData) {
+    try {
+        // Fetch attendance records for this class
+        const attendanceResponse = await fetch(`${API_URL}/classes/${classId}/attendance`);
+        if (!attendanceResponse.ok) {
+            throw new Error("Failed to load attendance data");
+        }
+        
+        const attendanceData = await attendanceResponse.json();
+        
+        // If we have attendance records, use the most recent one to populate the student list
+        if (attendanceData && attendanceData.length > 0) {
+            const latestAttendance = attendanceData[0]; // The first one should be the most recent
+            populateTable(latestAttendance.students);
+        } else {
+            // If no attendance records yet, fetch students from the session
+            fetchStudentsFromSession(classData.session);
+        }
+    } catch (error) {
+        console.error("Error:", error);
+        showError("Failed to load attendance data");
+    }
+}
+
+async function fetchStudentsFromSession(sessionName) {
+    try {
+        const response = await fetch(`${API_URL}/sessions/${sessionName}`);
+        if (!response.ok) {
+            throw new Error("Failed to load student data from session");
+        }
+        
+        const sessionData = await response.json();
+        
+        if (sessionData && sessionData.students && sessionData.students.length > 0) {
+            populateTable(sessionData.students);
+        } else {
+            showError("No students found in this session");
+        }
     } catch (error) {
         console.error("Error:", error);
         showError("Failed to load student data");
@@ -40,7 +103,7 @@ function populateTable(students) {
 
         // ID
         const idCell = document.createElement("td");
-        idCell.textContent = student.id;
+        idCell.textContent = student.studentId;
         row.appendChild(idCell);
 
         // Checkbox
@@ -48,21 +111,14 @@ function populateTable(students) {
         checkboxCell.classList.add("tcell");
         const checkbox = document.createElement("input");
         checkbox.type = "checkbox";
-        checkbox.dataset.id = student.id;
+        checkbox.dataset.id = student.studentId;
         checkboxCell.appendChild(checkbox);
         row.appendChild(checkboxCell);
-
-        // Percentage
-        // const percentageCell = document.createElement("td");
-        // percentageCell.textContent = "100%";
-        // percentageCell.dataset.id = student.id;
-        // row.appendChild(percentageCell);
 
         tableBody.appendChild(row);
     });
 
     setupCellClickHandlers();
-    // updateAttendanceCount();
 }
 
 function setupCellClickHandlers() {
@@ -76,61 +132,6 @@ function setupCellClickHandlers() {
     });
 }
 
-function updateAttendanceCount() {
-    const checkedBoxes = document.querySelectorAll('input[type="checkbox"]:checked').length;
-    document.getElementById("atdcnt").value = checkedBoxes;
-}
-
-// document.getElementById('submit').addEventListener('click', async () => {
-//     const date = document.getElementById('date').value;
-//     if (!date) {
-//         showError('Please select a date');
-//         return;
-//     }
-
-//     try {
-//         const attendanceData = {
-//             date: date,
-//             className: document.getElementById("class").innerHTML,
-//             session: document.getElementById("session").innerHTML,
-//             students: []
-//         };
-//         const atndce = document.getElementById("atdcnt").value;
-//         document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-//             const row = checkbox.closest('tr');
-//             attendanceData.students.push({
-//                 studentId: checkbox.dataset.id,
-//                 name: row.children[1].textContent,
-//                 status: checkbox.checked ? 1 * atndce : 0
-//             });
-//         });
-
-//         const response = await fetch(`${API_URL}/attendance`, {
-//             method: 'POST',
-//             headers: {
-//                 'Content-Type': 'application/json'
-//             },
-//             body: JSON.stringify(attendanceData)
-//         });
-
-//         // if (!response.ok) throw new Error('Failed to save attendance');
-
-//         const result = await response.json();
-//         showSuccess(result.message);
-//         await fetchAndUpdatePercentages();
-
-//         // Reset all fields
-//         document.getElementById('date').value = ''; // Reset date input field
-//         document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-//             checkbox.checked = false; // Uncheck all checkboxes
-//         });
-//         document.getElementById("atdcnt").value = 1;
-//     } catch (error) {
-//         console.error('Error:', error);
-//         // showError('Failed to save attendance');
-//     }
-// });
-
 document.getElementById('submit').addEventListener('click', async () => {
     const date = document.getElementById('date').value;
     if (!date) {
@@ -139,10 +140,20 @@ document.getElementById('submit').addEventListener('click', async () => {
     }
 
     try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const classId = urlParams.get('id');
+        
+        // First get class data to ensure we have the right info
+        const classResponse = await fetch(`${API_URL}/classes/${classId}`);
+        if (!classResponse.ok) {
+            throw new Error("Failed to load class data");
+        }
+        const classData = await classResponse.json();
+        
         const attendanceData = {
             date: date,
-            className: document.getElementById("class").innerHTML,
-            session: document.getElementById("session").innerHTML,
+            className: classData.name,
+            session: classData.session,
             students: []
         };
         const atndce = document.getElementById("atdcnt").value;
@@ -151,7 +162,7 @@ document.getElementById('submit').addEventListener('click', async () => {
             attendanceData.students.push({
                 studentId: checkbox.dataset.id,
                 name: row.children[1].textContent,
-                status: checkbox.checked ? 1 * atndce : 0
+                status: checkbox.checked ? 1 * atndce : 3 // Use 3 for absent as per your model
             });
         });
 
@@ -167,7 +178,6 @@ document.getElementById('submit').addEventListener('click', async () => {
 
         const result = await response.json();
         showSuccess(result.message);
-        await fetchAndUpdatePercentages();
 
         // Reset the date input and checkbox after submission
         document.getElementById('date').value = ''; // Reset date input field
@@ -178,42 +188,19 @@ document.getElementById('submit').addEventListener('click', async () => {
         
     } catch (error) {
         console.error('Error:', error);
-        // showError('Failed to save attendance');
+        showError('Failed to save attendance');
     }
-    location.reload();
 });
-
-function showSuccess(message) {
-    const successDiv = document.querySelector('.success-message') || 
-        createMessageElement('success-message');
-    successDiv.textContent = message;
-    successDiv.style.display = 'block';
-    setTimeout(() => successDiv.style.display = 'none', 3000);
-}
-
-function showError(message) {
-    const errorDiv = document.querySelector('.error-message') || 
-        createMessageElement('error-message');
-    errorDiv.textContent = message;
-    errorDiv.style.display = 'block';
-    setTimeout(() => errorDiv.style.display = 'none', 3000);
-}
-
-function createMessageElement(className) {
-    const div = document.createElement('div');
-    div.className = className;
-    document.body.insertBefore(div, document.body.firstChild);
-    return div;
-}
-
-document.addEventListener("DOMContentLoaded", fetchStudentData);
 
 document.getElementById('see_all').addEventListener('click', async () => {
     const section = document.querySelector('#attendance-summary-section');
     section.innerHTML = ''; // Clear existing content
 
     try {
-        const response = await fetch(`${API_URL}/attendance`);
+        const urlParams = new URLSearchParams(window.location.search);
+        const classId = urlParams.get('id');
+        
+        const response = await fetch(`${API_URL}/classes/${classId}/attendance`);
         if (!response.ok) {
             throw new Error('Failed to fetch attendance data');
         }
@@ -233,10 +220,14 @@ document.getElementById('see_all').addEventListener('click', async () => {
                 if (!studentAttendance[student.studentId]) {
                     studentAttendance[student.studentId] = {
                         name: student.name,
-                        attendanceCount: 0
+                        attendanceCount: 0,
+                        totalCount: 0
                     };
                 }
-                studentAttendance[student.studentId].attendanceCount += student.status;
+                studentAttendance[student.studentId].totalCount++;
+                if (student.status !== 3) { // If not absent (status 3)
+                    studentAttendance[student.studentId].attendanceCount += student.status;
+                }
             });
         });
 
@@ -264,12 +255,13 @@ document.getElementById('see_all').addEventListener('click', async () => {
             // Add attendance for each date
             attendanceData.forEach(record => {
                 const student = record.students.find(s => s.studentId === studentId);
-                row.innerHTML += `<td>${student ? student.status : 'Absent'}</td>`;
+                const status = student ? (student.status === 3 ? 'Absent' : student.status) : 'N/A';
+                row.innerHTML += `<td>${status}</td>`;
             });
 
             // Calculate and add percentage
-            const percentage = ((data.attendanceCount / 32) * 100).toFixed(2);
-            row.innerHTML += `<td>${percentage}%</td>`;
+            const attendancePercentage = (data.attendanceCount / attendanceData.length * 100).toFixed(2);
+            row.innerHTML += `<td>${attendancePercentage}%</td>`;
 
             tbody.appendChild(row);
         });
@@ -285,70 +277,115 @@ document.getElementById('see_all').addEventListener('click', async () => {
 
 // download as CSV
 document.getElementById('seeAllButton').addEventListener('click', async function() {
-    // Fetch all attendance data from the backend (you can adjust the URL if needed)
-    const response = await fetch(`${API_URL}/attendance`);
-    const allAttendanceData = await response.json();
+    try {
+        const urlParams = new URLSearchParams(window.location.search);
+        const classId = urlParams.get('id');
+        
+        // Fetch attendance data for this specific class
+        const response = await fetch(`${API_URL}/classes/${classId}/attendance`);
+        if (!response.ok) {
+            throw new Error('Failed to fetch attendance data');
+        }
+        
+        const allAttendanceData = await response.json();
 
-    // Ensure data is available
-    if (!allAttendanceData || allAttendanceData.length === 0) {
-        alert('No attendance data found.');
-        return;
-    }
+        // Ensure data is available
+        if (!allAttendanceData || allAttendanceData.length === 0) {
+            alert('No attendance data found.');
+            return;
+        }
 
-    // Create an array to store student attendance records with all dates
-    let studentData = [];
+        // Create an array to store student attendance records with all dates
+        let studentData = [];
 
-    // Loop through each attendance record to structure the data
-    allAttendanceData.forEach(attendance => {
-        attendance.students.forEach(student => {
-            let studentRecord = studentData.find(record => record.studentId === student.studentId);
-            if (!studentRecord) {
-                studentRecord = {
-                    studentId: student.studentId,
-                    name: student.name,
-                    attendance: {} // Will store attendance status per date
-                };
-                studentData.push(studentRecord);
-            }
-
-            // Add attendance for this student for the current date
-            studentRecord.attendance[attendance.date] = student.status; // Store the actual status value (1 or 0)
-        });
-    });
-
-    // Prepare CSV content
-    let csvContent = "Name, " + allAttendanceData.map(att => att.date).join(", ") + ", Percentage\n";
-
-    // Add student rows
-    studentData.forEach(student => {
-        let row = student.name;
-        let totalClasses = allAttendanceData.length; // Total number of dates available
-        let presentCount = 0;
-
-        // Add attendance status for each date (using the actual status from the database)
+        // Loop through each attendance record to structure the data
         allAttendanceData.forEach(attendance => {
-            const status = student.attendance[attendance.date] || 0; // Default to 0 (Absent) if no status found
-            if (status === 1) presentCount++;
-            row += `, ${status}`; // Use the actual status value (1 or 0)
+            attendance.students.forEach(student => {
+                let studentRecord = studentData.find(record => record.studentId === student.studentId);
+                if (!studentRecord) {
+                    studentRecord = {
+                        studentId: student.studentId,
+                        name: student.name,
+                        attendance: {} // Will store attendance status per date
+                    };
+                    studentData.push(studentRecord);
+                }
+
+                // Add attendance for this student for the current date
+                studentRecord.attendance[attendance.date] = student.status;
+            });
         });
 
-        // Calculate percentage
-        const percentage = ((presentCount / totalClasses) * 100).toFixed(2);
-        row += `, ${percentage}%`;
+        // Prepare CSV content
+        let csvContent = "Name, " + allAttendanceData.map(att => new Date(att.date).toLocaleDateString()).join(", ") + ", Percentage\n";
 
-        // Append row to CSV content
-        csvContent += row + "\n";
-    });
+        // Add student rows
+        studentData.forEach(student => {
+            let row = student.name;
+            let totalClasses = allAttendanceData.length;
+            let presentCount = 0;
 
-    // Download the CSV
-    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement('a');
-    const url = URL.createObjectURL(blob);
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'attendance_data.csv');
-    link.style.visibility = 'hidden';
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
+            // Add attendance status for each date
+            allAttendanceData.forEach(attendance => {
+                const status = student.attendance[attendance.date] || 3; // Default to 3 (Absent) if no status found
+                if (status !== 3) presentCount++; // Count as present if not absent
+                row += `, ${status === 3 ? 'Absent' : status}`;
+            });
+
+            // Calculate percentage
+            const percentage = ((presentCount / totalClasses) * 100).toFixed(2);
+            row += `, ${percentage}%`;
+
+            // Append row to CSV content
+            csvContent += row + "\n";
+        });
+
+        // Download the CSV
+        const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement('a');
+        const url = URL.createObjectURL(blob);
+        link.setAttribute('href', url);
+        link.setAttribute('download', 'attendance_data.csv');
+        link.style.visibility = 'hidden';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    } catch (error) {
+        console.error('Error generating CSV:', error);
+        alert('Failed to generate CSV: ' + error.message);
+    }
 });
 
+// Reset button functionality
+document.getElementById('reset').addEventListener('click', () => {
+    document.getElementById('date').value = '';
+    document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+        checkbox.checked = false;
+    });
+    document.getElementById("atdcnt").value = 1;
+});
+
+function showSuccess(message) {
+    const successDiv = document.querySelector('.success-message') || 
+        createMessageElement('success-message');
+    successDiv.textContent = message;
+    successDiv.style.display = 'block';
+    setTimeout(() => successDiv.style.display = 'none', 3000);
+}
+
+function showError(message) {
+    const errorDiv = document.querySelector('.error-message') || 
+        createMessageElement('error-message');
+    errorDiv.textContent = message;
+    errorDiv.style.display = 'block';
+    setTimeout(() => errorDiv.style.display = 'none', 3000);
+}
+
+function createMessageElement(className) {
+    const div = document.createElement('div');
+    div.className = className;
+    document.body.insertBefore(div, document.body.firstChild);
+    return div;
+}
+
+const API_URL = 'http://localhost:3000/api';

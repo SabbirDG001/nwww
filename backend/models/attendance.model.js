@@ -5,13 +5,17 @@ const attendanceSchema = new mongoose.Schema({
         type: Date,
         required: true
     },
+    name: {
+        type: String,
+        required: false
+    },
     className: {
         type: String,
-        required: true
+        required: false
     },
     session: {
         type: String,
-        required: true
+        required: false
     },
     students: [{
         studentId: {
@@ -23,7 +27,7 @@ const attendanceSchema = new mongoose.Schema({
             required: true
         },
         status: {
-            type: Number, // Use numeric values for attendance (e.g., count of attendance)
+            type: Number, // 0 = present, 3 = absent (based on the provided JSON data)
             required: true
         }
     }]
@@ -31,7 +35,7 @@ const attendanceSchema = new mongoose.Schema({
     timestamps: true
 });
 
-// Compound index for unique attendance records per class per day
-attendanceSchema.index({ date: 1, className: 1, session: 1 }, { unique: true });
+// Modify the index to be more flexible
+attendanceSchema.index({ date: 1 });
 
 module.exports = mongoose.model('Attendance', attendanceSchema);
