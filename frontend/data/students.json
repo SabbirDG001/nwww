@@ -1,0 +1,22 @@
+[
+  { "sNo": 1, "name": "Alice Johnson", "id": "IT220001" },
+  { "sNo": 2, "name": "Bob Smith", "id": "IT220002" },
+  { "sNo": 3, "name": "Charlie Davis", "id": "IT220003" },
+  { "sNo": 4, "name": "Diana Martinez", "id": "IT220004" },
+  { "sNo": 5, "name": "Ethan Brown", "id": "IT220005" },
+  { "sNo": 6, "name": "Fiona Wilson", "id": "IT220006" },
+  { "sNo": 7, "name": "George Taylor", "id": "IT220007" },
+  { "sNo": 8, "name": "Hannah Moore", "id": "IT220008" },
+  { "sNo": 9, "name": "Ian Anderson", "id": "IT220009" },
+  { "sNo": 10, "name": "Julia Clark", "id": "IT220010" },
+  { "sNo": 11, "name": "Kevin Thomas", "id": "IT220011" },
+  { "sNo": 12, "name": "Lily Harris", "id": "IT220012" },
+  { "sNo": 13, "name": "Mark Robinson", "id": "IT220013" },
+  { "sNo": 14, "name": "Nora Lewis", "id": "IT220014" },
+  { "sNo": 15, "name": "Oscar Walker", "id": "IT220015" },
+  { "sNo": 16, "name": "Penelope Scott", "id": "IT220016" },
+  { "sNo": 17, "name": "Quinn Young", "id": "IT220017" },
+  { "sNo": 18, "name": "Ruby Allen", "id": "IT220018" },
+  { "sNo": 19, "name": "Samuel King", "id": "IT220019" },
+  { "sNo": 20, "name": "Tessa Wright", "id": "IT220020" }
+]

@@ -1,0 +1,64 @@
+<!-- add_class.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Add Class</title>
+</head>
+<body>
+  <h2>Add New Class</h2>
+  <form onsubmit="addClass(event)">
+    <input type="text" id="className" placeholder="Class Name" required />
+    <!-- <label for="sessionName">Select Session:</label> -->
+    <select id="sessionName" required>
+      <option value="" disabled selected>Select a session</option>
+      <option value="session6">2020-2021</option>
+      <option value="session1">2021-2022</option>
+      <option value="session2">2022-2023</option>
+      <option value="session3">2023-2024</option>
+      <option value="session4">2024-2025</option>
+      <option value="session5">2025-2026</option>
+    </select>
+
+    <button type="submit">Add</button>
+  </form>
+  <script>
+    async function addClass(e) {
+      e.preventDefault();
+      const className = document.getElementById('className').value;
+      const sessionName = document.getElementById('sessionName').value;
+  
+      // First fetch full session data
+      const sessionRes = await fetch(`http://localhost:3000/api/sessions/${sessionName}`);
+      const sessionData = await sessionRes.json();
+  
+      if (!sessionRes.ok) {
+        alert('Failed to fetch session');
+        return;
+      }
+  
+      // Post the class with copied session data
+      const response = await fetch('http://localhost:3000/api/classes', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: className,
+          // session: sessionName,
+          data: sessionData.data, // copying student/session structure
+        }),
+      });
+  
+      if (response.ok) {
+        location.href = 'index.html';
+      } else {
+        alert('Failed to add class');
+      }
+    }
+  </script>
+  
+    
+</body>
+</html>

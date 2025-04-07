@@ -1,0 +1,89 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+
+* {
+    margin: 0;
+    padding: 10px;
+    font-family: "Roboto", sans-serif;
+}
+
+h1, h2 {
+    text-align: center;
+}
+
+h1 span {
+    color: blue;
+}
+
+h2 span {
+    color: rgb(0, 72, 255);
+}
+
+.sec_1 {
+    display: flex;
+    justify-content: space-between;
+}
+
+.all_btn {
+    margin-left: 20px;
+    padding: 10px 30px;
+    font-weight: bold;
+    font-size: 1rem;
+    border: 1px solid black;
+    background-color: white;
+    cursor: pointer;
+}
+
+.all_btn:hover {
+    background-color: gray;
+    border-color: gray;
+    color: white;
+}
+
+.padd {
+    margin-left: 3rem;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+th, td {
+    padding: 10px;
+    border: 1px solid #ddd;
+    text-align: center;
+}
+
+th {
+    background-color: #f4f4f4;
+    font-weight: bold;
+}
+
+.tcell {
+    cursor: pointer;
+}
+
+/* Added styles for better UX */
+input[type="checkbox"] {
+    transform: scale(1.2);
+    cursor: pointer;
+}
+
+.success-message {
+    color: green;
+    background-color: #e8f5e9;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+    display: none;
+}
+
+.error-message {
+    color: red;
+    background-color: #ffebee;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 4px;
+    display: none;
+}

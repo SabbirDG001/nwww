@@ -1,0 +1,69 @@
+// index.html
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Class Dashboard</title>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    button.action {
+      margin: 0 5px;
+      padding: 4px 8px;
+      cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+  <h2>All Classes</h2>
+  <button onclick="location.href='add_class.html'">Add New Class</button>
+  <table>
+    <thead>
+      <tr><th>#</th><th>Class Name</th><th>Session</th><th>Actions</th></tr>
+    </thead>
+    <tbody id="classTable"></tbody>
+  </table>
+  <script>
+    async function fetchClasses() {
+      const response = await fetch('http://localhost:3000/api/classes');
+      return await response.json();
+    }
+
+    async function deleteClass(id) {
+      const confirmed = confirm('Are you sure you want to delete this class?');
+      if (!confirmed) return;
+
+      const res = await fetch(`http://localhost:3000/api/classes/${id}`, {
+        method: 'DELETE'
+      });
+
+      if (res.ok) {
+        alert('Class deleted');
+        window.location.reload();
+      } else {
+        alert('Failed to delete class');
+      }
+    }
+
+    window.onload = async function () {
+      const classes = await fetchClasses();
+      const classTable = document.getElementById('classTable');
+
+      classes.forEach((cls, i) => {
+        const row = document.createElement('tr');
+        row.innerHTML = `
+          <td>${i + 1}</td>
+          <td>${cls.name}</td>
+          <td>${cls.session}</td>
+          <td>
+            <a href="class.html?id=${cls._id}" class="action">Attendance</a>
+            <a href="edit_class.html?id=${cls._id}" class="action">Edit</a>
+            <button class="action" onclick="deleteClass('${cls._id}')">Delete</button>
+          </td>
+        `;
+        classTable.appendChild(row);
+      });
+    };
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+frontend/
+│
+├── index.html
+├── css/
+│   └── styles.css
+├── js/
+│   ├── app.js
+│   └── fetch.js
+├── data/
+│   └── students.json
+└── assets/
+    └── favicon.ico
