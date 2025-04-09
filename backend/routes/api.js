@@ -140,6 +140,62 @@ router.post('/classes', async (req, res) => {
   }
 });
 
+// MOVED OUTSIDE - Post attendance data
+router.post('/attendance', async (req, res) => {
+  try {
+    const { date, className, session, students } = req.body;
+    
+    // Validate required fields
+    if (!date || !className || !session || !Array.isArray(students)) {
+      return res.status(400).json({ 
+        error: 'Invalid request. Required fields: date, className, session, students array' 
+      });
+    }
+    
+    console.log(`Saving attendance for class "${className}" (${session}) on ${date}`);
+    
+    // Check if an attendance record already exists for this class/date
+    let attendanceRecord = await Attendance.findOne({
+      className,
+      session,
+      date: new Date(date)
+    });
+    
+    if (attendanceRecord) {
+      // Update existing record
+      console.log(`Updating existing attendance record (${attendanceRecord._id})`);
+      attendanceRecord.students = students;
+      attendanceRecord.updatedAt = new Date();
+      await attendanceRecord.save();
+      
+      res.json({
+        message: 'Attendance record updated successfully',
+        record: attendanceRecord
+      });
+    } else {
+      // Create new record
+      console.log(`Creating new attendance record for class "${className}"`);
+      const newAttendance = new Attendance({
+        date: new Date(date),
+        className,
+        session,
+        students,
+        createdAt: new Date()
+      });
+      
+      await newAttendance.save();
+      
+      res.status(201).json({
+        message: 'Attendance recorded successfully',
+        record: newAttendance
+      });
+    }
+  } catch (err) {
+    console.error('Error saving attendance:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get attendance records for a specific class
 router.get('/classes/:id/attendance', async (req, res) => {
   try {
